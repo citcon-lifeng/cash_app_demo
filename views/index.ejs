@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <meta httpEquiv="x-ua-compatible" content="ie=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+  </head>
+  <body>
+    <div id="cash-app-pay"><!-- populated by Pay Kit --></div>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.0.min.js"></script>
+    <script type="module" src="https://sandbox.kit.cash.app/v1/pay.js"></script>
+    <script type="module">
+      const pay = await window.CashApp.pay({ clientId: 'CAS-CI_CITCON'});
+      const amount = {
+        currency: 'USD',
+        value: 1234, // $12.34
+      };
+      const scopeId = 'MMI_9m0w95bc3b1s6tof5g19dpvn5';
+      const details = {
+        referenceId: "<%= referenceId %>", // perhaps a cart or checkout identifier
+        redirectURL:  "<%= doneUrl %>", // where mobile customers should be redirected to
+        actions: {
+          payment: {
+            amount,
+            scopeId,
+          }
+        }
+      }
+      const result = await pay.customerRequest(details);
+      console.log('result', result);
+      // const success = await update(details);
+      // alert(success);
+      pay.addEventListener(
+              'CUSTOMER_REQUEST_APPROVED',
+              ({ customerProfile, grants, referenceId }) => {
+                console.log('grant', grants);
+                console.log('params', [grants.payment.grantId,customerProfile]);
+                createPayment({
+                  amount,
+                  referenceId,
+                  grantId: grants.payment.grantId,
+                });
+              }
+      );
+      function createPayment(data) {
+        $.post("<%= createPaymentUrl %>", {
+          amount: data.amount.value,
+          referenceId: data.referenceId,
+          grantId: data.grantId
+        }, function (response) {
+          if(response.status === 'success' ){
+            window.location.href = "<%= successUrl %>";
+          } else {
+            window.location.href = "<%= failUrl %>";
+          }
+        });
+      }
+
+      await pay.render('#cash-app-pay');
+      // document.getElementById('cash-app-pay').shadowRoot.querySelector("button").click();
+      // document.getElementById('cash-app-pay').shadowRoot.querySelector("button").style.display = 'none';
+    </script>
+  </body>
+</html>
